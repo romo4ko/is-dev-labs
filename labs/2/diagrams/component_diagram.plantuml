@@ -1,0 +1,90 @@
+@startuml component_diagram
+!define RECTANGLE class
+
+left to right direction
+skinparam maxMessageSize 150
+
+' Стили
+skinparam componentStyle rectangle
+skinparam backgroundColor #FEFEFE
+skinparam component {
+  BackgroundColor #E1F5FE
+  BorderColor #0288D1
+  FontColor #01579B
+}
+skinparam database {
+  BackgroundColor #FFF9C4
+  BorderColor #FBC02D
+  FontColor #5D4037
+}
+skinparam actor {
+  BackgroundColor #F5F5F5
+  BorderColor #616161
+  FontColor #212121
+}
+skinparam boundary {
+  BackgroundColor #FFFFFF
+  BorderColor #AAAAAA
+}
+
+' Внешние сущности
+actor "Врач\n(Терапевт/Кардиолог)" as Doctor
+boundary "МИС / EHR" as MIS
+boundary "ЛИС" as LIS
+boundary "PACS (опционально)" as PACS
+
+' Система
+package "Когнитивный помощник врача (CDSS)" {
+  
+  ' API Layer
+  component "API-Шлюз / Оркестратор" as API_Gateway
+  interface "REST API" as rest_api
+  
+  ' Data Layer
+  component "Сервис управления данными" as DataService {
+    component "ETL Пайплайны" as ETL
+    database "Кеш (Redis)" as Cache
+    database "Хранилище признаков\n(Feature Store)" as FeatureStore
+  }
+  
+  ' Analytics Layer
+  component "Аналитическое ядро" as Analytics {
+    component "ML-Сервис (прогноз)" as ML_Service
+    component "NLP-Сервис (текст)" as NLP_Service
+    component "Сервис правил\n(Rule Engine)" as RuleEngine
+    component "Сервис объяснений\n(XAI Engine)" as XAI
+  }
+  
+  ' Knowledge Layer
+  database "База знаний" as KnowledgeBase {
+    database "Онтология заболеваний\n(Neo4j)" as Ontology
+    database "Клинические рекомендации" as Guidelines
+  }
+  
+  ' UI Layer
+  component "Бэкенд UI\n(BFF)" as BFF
+  component "Веб-приложение\n(Frontend)" as Frontend
+}
+
+' Взаимодействия
+Doctor --> Frontend : Взаимодействие
+Frontend --> BFF : API-запросы
+BFF --> API_Gateway : Внутренние запросы
+
+API_Gateway --> DataService : 1. Запрос данных
+API_Gateway --> Analytics : 2. Запуск анализа
+API_Gateway --> KnowledgeBase : 3. Запрос знаний
+API_Gateway --> BFF : 4. Агрегация ответа
+
+DataService --> MIS : Загрузка данных пациента
+DataService --> LIS : Загрузка лабораторных данных
+DataService --> PACS : Загрузка описаний снимков (опционально)
+
+Analytics --> DataService : Получение признаков
+ML_Service --> FeatureStore : Чтение признаков
+NLP_Service --> FeatureStore : Запись извлеченных сущностей
+RuleEngine --> KnowledgeBase : Получение правил/онтологий
+XAI --> ML_Service : Получение предсказаний
+XAI --> DataService : Получение исходных данных
+
+@enduml

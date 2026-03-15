@@ -1,0 +1,39 @@
+@startuml xai_diagram
+
+skinparam backgroundColor #FEFEFE
+skinparam node {
+  BackgroundColor #E8F5E8
+  BorderColor #2E7D32
+  FontColor #1B5E20
+}
+skinparam arrow {
+  Color #616161
+}
+
+node "Входные данные пациента" as Input {
+  rectangle "<b>Возраст:</b> 55 лет\n<b>Пол:</b> Мужской\n<b>ИМТ:</b> 28\n<b>АД:</b> 145/90\n<b>Холестерин:</b> Повышен (2)\n<b>Курение:</b> Да\n<b>Активность:</b> Нет" as Data
+}
+
+node "Модель\nXGBoost/LightGBM" as Model {
+  rectangle "Вероятность ССЗ: <b>0.85 (85%)</b>" as Prediction
+}
+
+node "XAI Engine (SHAP)" as Shap {
+  rectangle "Анализ вклада каждого признака" as Analysis
+}
+
+node "Объяснение для врача" as Output {
+  rectangle "<b>Ключевые факторы риска:</b>\n+0.30 Повышенный холестерин\n+0.25 Возраст 55 лет\n+0.20 Высокое АД (145/90)\n+0.15 Курение\n-------------------------\n-0.05 Нормальный уровень глюкозы\n<b>Итог: 0.85 (85%)</b>" as Explanation
+}
+
+Data --> Model : Признаки
+Model --> Shap : Предсказание + SHAP values
+Shap --> Output : Форматированное объяснение
+
+note bottom of Shap
+  SHAP (SHapley Additive exPlanations)
+  вычисляет вклад каждого признака
+  в итоговое предсказание
+end note
+
+@enduml

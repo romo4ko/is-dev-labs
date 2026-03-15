@@ -1,0 +1,59 @@
+@startuml sequence_diagram
+
+skinparam maxMessageSize 150
+
+actor "Врач" as Doctor
+participant "Фронтенд\n(React)" as Frontend
+participant "Бэкенд UI\n(BFF)" as BFF
+participant "API-Шлюз" as API
+participant "Сервис\nуправления данными" as Data
+participant "МИС/ЛИС" as External
+participant "ML-Сервис" as ML
+participant "Сервис правил" as Rules
+participant "XAI Сервис" as XAI
+database "Хранилище\nпризнаков" as FS
+
+Doctor -> Frontend: Открыть карту пациента
+Frontend -> BFF: Запрос данных пациента
+BFF -> API: GET /api/patient/{id}
+API -> Data: Запрос данных из внешних систем
+Data -> External: Загрузка данных (возраст, пол, анализы)
+External --> Data: Данные пациента
+Data -> FS: Сохранение признаков
+Data --> API: Данные загружены
+API --> BFF: Данные пациента
+BFF --> Frontend: Отображение данных
+
+Doctor -> Frontend: Нажать "Оценить риск ССЗ"
+Frontend -> BFF: POST /api/assess-risk
+BFF -> API: Запрос на оценку риска
+
+API -> Data: Получить актуальные признаки
+Data -> FS: Запрос признаков
+FS --> Data: Признаки
+Data --> API: Признаки
+
+API -> ML: Запустить прогноз (признаки)
+ML -> FS: Чтение признаков
+ML --> API: Вероятность ССЗ (0.85)
+
+API -> Rules: Валидация прогноза (признаки, вероятность)
+Rules -> FS: Чтение признаков
+Rules --> API: Результат валидации, предупреждения
+
+API -> XAI: Сгенерировать объяснение (признаки, прогноз)
+XAI -> ML: Запрос SHAP values
+ML --> XAI: SHAP values
+XAI --> API: Объяснение (ключевые факторы)
+
+API -> BFF: Агрегированный ответ (прогноз, объяснение, предупреждения)
+BFF -> Frontend: Результат оценки
+
+Frontend -> Doctor: Отображение:\n- Вероятность 85%\n- Ключевые факторы\n- Рекомендации
+
+Doctor -> Frontend: Отклонить/принять рекомендацию\n(опционально с комментарием)
+Frontend -> BFF: POST /api/feedback
+BFF -> API: Сохранить обратную связь
+API -> Data: Логирование反馈 для дообучения
+
+@enduml
